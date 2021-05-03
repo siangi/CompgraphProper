@@ -1,5 +1,5 @@
 //
-// Computer Graphics
+// DI Computer Graphics
 //
 // WebGL Exercises
 //
@@ -7,14 +7,16 @@
 // Register function to call after document has loaded
 window.onload = startup;
 
-// the gl object is saved globally next comment adds autocomplete
-/** @type {WebGLRenderingContext} */
+// the gl object is saved globally
 var gl;
 
 // we keep all local parameters for the program in a single object
 var ctx = {
     shaderProgram: -1,
-    // add local parameters for attributes and uniforms here
+    aVertexPositionId: -1,
+    uColorId: -1,
+    uProjectionMatId: -1,
+    uModelMatId: -1
 };
 
 // we keep all the parameters for drawing a specific object together
@@ -22,9 +24,6 @@ var rectangleObject = {
     buffer: -1
 };
 
-var smallerObject = {
-    buffer: -1
-};
 /**
  * Startup function to be called when the body is loaded
  */
@@ -44,9 +43,13 @@ function initGL() {
     ctx.shaderProgram = loadAndCompileShaders(gl, 'VertexShader.glsl', 'FragmentShader.glsl');
     setUpAttributesAndUniforms();
     setUpBuffers();
+    
+    gl.clearColor(0.1, 0.1, 0.1, 1);
 
-    // set the clear color here
-    gl.clearColor(0.2, 0.2, 0.2, 1);
+    // Set up the world coordinates
+    var projectionMat = mat3.create();
+    mat3.fromScaling(projectionMat, [2.0/gl.drawingBufferWidth, 2.0/gl.drawingBufferHeight]);
+    gl.uniformMatrix3fv(ctx.uProjectionMatId,false , projectionMat);
 }
 
 /**
@@ -54,47 +57,25 @@ function initGL() {
  */
 function setUpAttributesAndUniforms(){
     "use strict";
-    // add code here to get the ids of attributes and uniform variables from the shaders
     ctx.aVertexPositionId = gl.getAttribLocation(ctx.shaderProgram, "aVertexPosition");
-    rectangleObject.color = gl.getUniformLocation(ctx.shaderProgram, "color");
+    ctx.uColorId = gl.getUniformLocation(ctx.shaderProgram, "uColor");
+    ctx.uProjectionMatId = gl.getUniformLocation(ctx.shaderProgram, "uProjectionMat");
+    ctx.uModelMatId = gl.getUniformLocation(ctx.shaderProgram, "uModelMat")
 }
 
-//sample Comment
 /**
  * Setup the buffers to use. If more objects are needed this should be split in a file per object.
  */
 function setUpBuffers(){
     "use strict";
-
     rectangleObject.buffer = gl.createBuffer();
-    smallerObject.buffer = gl.createBuffer()
-    
     var vertices = [
         -0.5, -0.5,
         0.5, -0.5,
         0.5, 0.5,
         -0.5, 0.5];
-
-    var vertices2 = [
-            0.8, 0.8,
-            0.8, 0.85,
-            0.75, 0.85,
-            0.75, 0.8
-    ];
-    
-    var color = [0.8, 0.8, 0, 1];
-    var color2 = [0.6, 0.6, 0, 1];
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, smallerObject.buffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices2), gl.STATIC_DRAW);
-    gl.bindBuffer(gl.ARRAY_BUFFER, null);
-    gl.bindBuffer(gl.ARRAY_BUFFER, smallerObject.buffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices2), gl.STATIC_DRAW);
-
-    gl.vertexAttribPointer(ctx.aVertexPositionId, 2, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(ctx.aVertexPositionId);
-    gl.uniform4fv(smallerObject.color, new Float32Array(color2));
-    gl.uniform4fv(rectangleObject.color, new Float32Array(color));
+    gl.bindBuffer(gl.ARRAY_BUFFER, rectangleObject.buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
 }
 
 /**
@@ -104,5 +85,17 @@ function draw() {
     "use strict";
     console.log("Drawing");
     gl.clear(gl.COLOR_BUFFER_BIT);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, rectangleObject.buffer);
+    gl.vertexAttribPointer(ctx.aVertexPositionId, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(ctx.aVertexPositionId);
+
+    gl.uniform4f(ctx.uColorId, 1, 1, 1, 1);
+
+    var modelMat = mat3.create();
+    mat3.fromScaling(modelMat, [100, 100]);
+    gl.uniformMatrix3fv(ctx.uModelMatId, false, modelMat);
+
     gl.drawArrays(gl.TRIANGLE_FAN, 0, 4);
 }
+
